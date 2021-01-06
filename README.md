@@ -73,3 +73,8 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
   Nest is [MIT licensed](LICENSE).
+
+## Setup
+
+To get this to run properly you will have to setup the .env file. Copy the .example.env and remove the ".example" prefix.
+Then change the Host addresses, users and passwords to your local setup. 
