@@ -1,9 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Gamemanager } from '../Gamemanager';
-import { Gameobject } from '../Gameobject';
 import { MqttClient } from 'mqtt';
 import { Structure } from '../Models/Structure';
 import { BuildingResource } from '../Models/BuildingResource';
+import { Game } from './Game';
+import { Hex } from '../Models/Hex';
+import { HexType } from '../Models/HexType';
+import { LobbyService } from '../lobby/lobby.service';
+import { Playerentity } from '../Models/Player';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mqtt = require('mqtt');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -11,25 +15,29 @@ const dotenv = require('dotenv').config();
 
 @Injectable()
 export class GameService {
-  private games: Map<number, Gamemanager>;
+  private gameManager: Map<number, Gamemanager>;
   private gameIdAtomic = 0;
   private client: MqttClient;
+  private lobbyService;
 
-  constructor() {
-    this.games = new Map<number, Gamemanager>();
-    this.client = mqtt.connect(process.env.MQTT_HOST_VM,
+  constructor(lobbyService: LobbyService) {
+    this.lobbyService = lobbyService;
+    this.gameManager = new Map<number, Gamemanager>();
+    this.client = mqtt.connect(process.env.MQTT_HOST,
       {
+        clientId: process.env.MQTT_PLAY_CLIENT_ID,
         port: process.env.MQTT_PORT,
         username: process.env.MQTT_USER,
         password: process.env.MQTT_PASSWORD,
         protocol: process.env.MQTT_PROTOCOL
       })
     this.client.on('connect', () => {
-      console.log('connected to mqtt broker')
-      this.client.subscribe(process.env.MQTT_GAME + '#')
+      console.log('Game: connected to mqtt broker')
+      //this.client.subscribe(process.env.MQTT_GAME + '#')
+      //console.log(`listening to ${process.env.MQTT_GAME}#`)
     })
     this.client.on('message', (topic, msg) => {
-      console.log(`${topic}: ${msg}`);
+      //console.log(`${topic}: ${msg}`);
     });
     this.client.on('error', (error) => {
       console.log(`ERROR: ${error}`);
@@ -46,15 +54,21 @@ export class GameService {
      */
   }
 
-  newGame(rules: any, sub: any): number{
-    const gm = new Gamemanager(new Gameobject(this.gameIdAtomic++,rules,null), sub)
-    this.games.set(gm.gameid,gm);
-    return gm.gameid
+  newGame(meta_data: any, sub: string): number{
+    //console.log(meta_data)
+    const gm = new Gamemanager(new Game(this.gameIdAtomic++,meta_data.pointsToWin,meta_data.hexes,meta_data.harbours,meta_data.max_res,meta_data.max_dev), sub)
+    this.gameManager.set(gm.GID,gm);
+    return gm.GID
   }
 
-  delGame(id: number, sub: any) {
-    if (this.games.get(id).host === sub){
-      return this.games.delete(id);
+  /**
+   * @param GID GameID which corresponding Game is to be deleted
+   * @param sub Issuer
+   */
+  delGame(GID: number, sub: any) {
+    //Only hosts are allowed to delete games via request
+    if (this.gameManager.get(GID).host_sub === sub){
+      return this.gameManager.delete(GID);
     }
     else{
       throw new HttpException('Its not your game, only hosts can delete games', HttpStatus.BAD_REQUEST);
@@ -62,18 +76,18 @@ export class GameService {
   }
 
   dice(id: number, sub: any) {
-    if (this.games.get(id).getGameobject()._turn_playerid===sub){
-      this.games.get(id).role_dice();
+    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
+      this.gameManager.get(id).role_dice();
       //TODO publish new state
-      //this.games.get(id)
+      //this.gameManager.get(id)
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
   }
 
   nextTurn(id: number, sub: any){
-    if(this.games.get(id).getGameobject()._turn_playerid===sub){
-      this.games.get(id).nextTurn();
+    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
+      this.gameManager.get(id).nextTurn();
       //TODO publish new state
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
@@ -81,15 +95,15 @@ export class GameService {
   }
 
   build(id: number, sub: any, structure: Structure, x: number, y: number){
-    if(this.games.get(id).getGameobject()._turn_playerid === sub){
-      this.games.get(id).buildStructure(sub, structure, x, y);
+    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
+      this.gameManager.get(id).buildStructure(sub, structure, x, y);
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
   }
 
   requestTrade(id: number, sub: any, offerRes: BuildingResource[], reqRes: BuildingResource[]){
-    if(this.games.get(id).getGameobject()._turn_playerid === sub){
+    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
       // TODO publish trade request
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
@@ -100,12 +114,31 @@ export class GameService {
     // TODO trade resource between acceptor and requestor
   }
 
-  publish(id: number): void{
-    this.client.publish(`${process.env.MQTT_GAME}${id}`,JSON.stringify(this.games.get(id).getGameobject().toJSON()), {retain: true});
+  publish(GID: number): void{
+    console.log(JSON.stringify(this.gameManager.get(GID).getGame()))
+    this.client.publish(`${process.env.MQTT_GAME}${GID}`,JSON.stringify(this.gameManager.get(GID).getGame()), {retain: true});
   }
 
-  startGame(number: number, sub: any) {
-    console.log('gamestart requested, tbt')
-    //this.games.get(id)
+  startGame(GID: number, sub: any, body: any) {
+    // Only Hosts are allowed to start the Game
+    if (this.gameManager.get(GID).host_sub === sub){
+      this.gameManager.get(GID).setPlayerDetails(this.lobbyService.player.get(GID));
+      // Remove info that should not be published
+      const arr: Playerentity[] = Array.from(this.lobbyService.player.get(GID).values());
+      this.gameManager.get(GID).getGame().setPlayers(arr.map(p => {
+        p.sub = '';
+        p.development_cards = [];
+        p.resources = [];
+        return p
+      }))
+      // Tell the lobby that the game has started
+      this.client.publish(process.env.MQTT_LOBBY.concat(GID.toString()),JSON.stringify({started: true}),{retain: true})
+      // Publish the Gamestate
+      this.publish(GID);
+      return true;
+    }else{
+      return false;
+    }
+
   }
 }

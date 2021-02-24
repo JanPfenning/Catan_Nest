@@ -5,8 +5,10 @@ import { Playerentity } from '../Models/Player';
 
 @Controller('creation')
 export class CreationController {
+
   gameService: GameService;
   lobbyService: LobbyService;
+
   constructor(gameService: GameService,
               lobbyService: LobbyService) {
     this.gameService = gameService;
@@ -15,6 +17,7 @@ export class CreationController {
 
   @Post()
   newGame(@Req() req,@Body()payload:any): number{
+    console.log(payload)
     const id = this.gameService.newGame(payload, req.user.sub);
     this.lobbyService.newLobby(id,payload,req.user.sub);
     return id;
@@ -30,14 +33,13 @@ export class CreationController {
     return this.lobbyService.updatePlayer(+id, payload, req.user.sub);
   }
 
-  @Post(':id')
-  startGame(@Param('id')id:number, @Req() req): void{
-    this.gameService.startGame(+id,req.user.sub);
+  @Post('/game/:id')
+  startGame(@Param('id')id:number, @Req() req, @Body() payload): boolean{
+    return this.gameService.startGame(+id,req.user.sub, payload);
   }
 
   @Get(':id')
   getPass(@Param('id')id:number, @Req() req): string{
-    //console.log(`is ${id} a number?`);
     return this.lobbyService.getPass(+id, req.user.sub);
   }
 }
