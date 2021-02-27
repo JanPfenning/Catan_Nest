@@ -82,7 +82,7 @@ export class LobbyService {
   }
 
   private publishLobby(id: number) {
-    const arr = Array.from(this.player.get(id).values()).map(e => ({name: e.name,color: e.colour}));
+    const arr = Array.from(this.player.get(id).values()).map(e => ({name: e.meta.name,color: e.meta.colour}));
     //console.log(JSON.stringify(arr)+"\nto "+process.env.MQTT_LOBBY.concat(id.toString()));
     this.client.publish(process.env.MQTT_LOBBY.concat(id.toString()),JSON.stringify(arr),{retain: true});
   }

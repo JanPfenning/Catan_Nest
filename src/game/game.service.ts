@@ -4,10 +4,9 @@ import { MqttClient } from 'mqtt';
 import { Structure } from '../Models/Structure';
 import { BuildingResource } from '../Models/BuildingResource';
 import { Game } from './Game';
-import { Hex } from '../Models/Hex';
-import { HexType } from '../Models/HexType';
 import { LobbyService } from '../lobby/lobby.service';
-import { Playerentity } from '../Models/Player';
+import { Meta } from '../Models/Player';
+import { Gamestate } from '../Models/Gamestate';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mqtt = require('mqtt');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -54,9 +53,21 @@ export class GameService {
      */
   }
 
+  getGameManager(id: number): Gamemanager{
+    return this.gameManager.get(id);
+  }
+
   newGame(meta_data: any, sub: string): number{
     //console.log(meta_data)
-    const gm = new Gamemanager(new Game(this.gameIdAtomic++,meta_data.pointsToWin,meta_data.hexes,meta_data.harbours,meta_data.max_res,meta_data.max_dev), sub)
+    const gm = new Gamemanager(
+      new Game(
+        this.gameIdAtomic++,
+        meta_data.pointsToWin,
+        meta_data.hexes,
+        meta_data.harbours,
+        meta_data.max_res,
+        meta_data.max_dev)
+      , sub)
     this.gameManager.set(gm.GID,gm);
     return gm.GID
   }
@@ -75,8 +86,20 @@ export class GameService {
     }
   }
 
+  //TODO determine order of turns
+  determineOrder(GID: number, sub: any){
+    if(this.gameManager.get(GID).getGame().state === Gamestate.PREPARATION){
+      if (this.gameManager.get(GID).host_sub === sub) {
+        this.shuffle(this.gameManager.get(GID).getGame().players);
+        this.gameManager.get(GID).getGame().state = Gamestate.INITIAL_PLACE
+        this.publish(GID);
+      }
+      this.gameManager.get(GID).getGame().whos_turn = this.gameManager.get(GID).getGame().players[0]
+    }
+  }
+
   dice(id: number, sub: any) {
-    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
+    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
       this.gameManager.get(id).role_dice();
       //TODO publish new state
       //this.gameManager.get(id)
@@ -86,7 +109,7 @@ export class GameService {
   }
 
   nextTurn(id: number, sub: any){
-    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
+    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
       this.gameManager.get(id).nextTurn();
       //TODO publish new state
     }else{
@@ -95,7 +118,7 @@ export class GameService {
   }
 
   build(id: number, sub: any, structure: Structure, x: number, y: number){
-    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
+    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
       this.gameManager.get(id).buildStructure(sub, structure, x, y);
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
@@ -103,7 +126,7 @@ export class GameService {
   }
 
   requestTrade(id: number, sub: any, offerRes: BuildingResource[], reqRes: BuildingResource[]){
-    if (this.gameManager.get(id).getGame().players_turn.PID === this.gameManager.get(id).getPlayerDetails(sub).PID){
+    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
       // TODO publish trade request
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
@@ -123,14 +146,11 @@ export class GameService {
     // Only Hosts are allowed to start the Game
     if (this.gameManager.get(GID).host_sub === sub){
       this.gameManager.get(GID).setPlayerDetails(this.lobbyService.player.get(GID));
-      // Remove info that should not be published
-      const arr: Playerentity[] = Array.from(this.lobbyService.player.get(GID).values());
-      this.gameManager.get(GID).getGame().setPlayers(arr.map(p => {
-        p.sub = '';
-        p.development_cards = [];
-        p.resources = [];
-        return p
-      }))
+      this.lobbyService.player.get(GID).forEach(
+        value => this.gameManager.get(GID).getGame().players.push(value.meta)
+      )
+      this.gameManager.get(GID).getGame().whos_turn = this.gameManager.get(GID).getPlayerDetails(sub).meta;
+      this.gameManager.get(GID).getGame().state = Gamestate.PREPARATION;
       // Tell the lobby that the game has started
       this.client.publish(process.env.MQTT_LOBBY.concat(GID.toString()),JSON.stringify({started: true}),{retain: true})
       // Publish the Gamestate
@@ -139,6 +159,13 @@ export class GameService {
     }else{
       return false;
     }
+  }
 
+  shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
 }

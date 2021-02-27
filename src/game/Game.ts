@@ -1,22 +1,24 @@
 import { Edge } from '../Models/Edge';
 import { Vertex } from '../Models/Vertex';
 import { Hex } from '../Models/Hex';
-import { Playerentity } from '../Models/Player';
+import { Meta, Playerentity } from '../Models/Player';
+import { Gamestate } from '../Models/Gamestate';
 
 export class Game{
   GID: number
-  playerMetadata: Playerentity[]
+  state: Gamestate
   pointsToWin: number
   hexes: Hex[][]
   edges: Edge[][]
   vertices: Vertex[][]
   harbours: Harbour[]
+  players: Meta[] = [];
   bank_res: {brick: number, lumber: number, wool: number, grain: number, ore: number}
   max_res: {brick: number, lumber: number, wool: number, grain: number, ore: number}
   cur_dev: number
   max_dev: number
   turn: number
-  players_turn: Playerentity
+  whos_turn: Meta
   roll_history: number[]
 
   constructor(GID: number, pointsToWin: number, hexes: Hex[][], harbours: Harbour[],
@@ -29,6 +31,7 @@ export class Game{
     this.hexes = hexes;
     this.harbours = harbours;
 
+    this.state = Gamestate.LOBBY;
     const height = hexes.length
     const width = hexes[0].length
     this.edges = []
@@ -39,9 +42,9 @@ export class Game{
       }
     }
     this.vertices = []
-    for(let i = 0; i < (2 * width + 1); i++){
+    for(let i = 0; i <= (2 * width + 1); i++){
       this.vertices[i]=[]
-      for(let j = 0; j < (2 * height + 1); j++){
+      for(let j = 0; j <= (2 * height + 1); j++){
         this.vertices[i][j] = new Vertex(i,j)
       }
     }
@@ -49,10 +52,5 @@ export class Game{
     this.cur_dev = max_dev;
     this.turn = 0;
     this.roll_history = [];
-  }
-
-  setPlayers(players: Playerentity[]): void{
-    this.playerMetadata = players
-    this.players_turn = this.playerMetadata[0];
   }
 }
