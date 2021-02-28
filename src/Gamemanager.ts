@@ -1,6 +1,7 @@
-import { Structure, getCost } from './Models/Structure';
+import { Structure } from './Models/Structure';
 import { Game } from './game/Game';
 import { Playerentity } from './Models/Player';
+import { Gamestate } from './Models/Gamestate';
 
 export class Gamemanager {
   private game: Game;
@@ -26,8 +27,22 @@ export class Gamemanager {
     return this.player_details.get(sub);
   }
 
-  buildStructure(issuer: any, structure:Structure, x: number, y: number) {
-    // TODO
+  buildStructure(sub: any, structure: Structure, x: number, y: number) {
+    // TODO check if user has that structure left to build
+    if (this.getGame().state === Gamestate.INITIAL_PLACE){
+      switch (structure){
+        case Structure.City: {
+          const vertex = this.getGame().vertices[x][y];
+          vertex.building = structure;
+          vertex.owner_id = this.getPlayerDetails(sub).meta.PID;
+          vertex.x = x;
+          vertex.y = y;
+        }
+      }
+    }else{
+      // TODO pay for the acutal building of the structure
+    }
+    // TODO decrement building amount
   }
 
   distributeEarnings(points:number):void{

@@ -17,7 +17,6 @@ export class CreationController {
 
   @Post()
   newGame(@Req() req,@Body()payload:any): number{
-    console.log(payload)
     const id = this.gameService.newGame(payload, req.user.sub);
     this.lobbyService.newLobby(id,payload,req.user.sub);
     return id;

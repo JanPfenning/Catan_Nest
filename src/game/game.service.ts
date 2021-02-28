@@ -53,10 +53,6 @@ export class GameService {
      */
   }
 
-  getGameManager(id: number): Gamemanager{
-    return this.gameManager.get(id);
-  }
-
   newGame(meta_data: any, sub: string): number{
     //console.log(meta_data)
     const gm = new Gamemanager(
@@ -117,12 +113,13 @@ export class GameService {
     }
   }
 
-  build(id: number, sub: any, structure: Structure, x: number, y: number){
-    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
-      this.gameManager.get(id).buildStructure(sub, structure, x, y);
+  build(GID: number, sub: any, structure: Structure, x: number, y: number){
+    if (this.gameManager.get(GID).getGame().whos_turn === this.gameManager.get(GID).getPlayerDetails(sub).meta){
+      this.gameManager.get(GID).buildStructure(sub, structure, x, y);
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
+    this.publish(GID);
   }
 
   requestTrade(id: number, sub: any, offerRes: BuildingResource[], reqRes: BuildingResource[]){
@@ -138,7 +135,7 @@ export class GameService {
   }
 
   publish(GID: number): void{
-    console.log(JSON.stringify(this.gameManager.get(GID).getGame()))
+    //console.log(JSON.stringify(this.gameManager.get(GID).getGame()))
     this.client.publish(`${process.env.MQTT_GAME}${GID}`,JSON.stringify(this.gameManager.get(GID).getGame()), {retain: true});
   }
 
@@ -167,5 +164,9 @@ export class GameService {
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
+  }
+
+  personalData(GID: number, sub: any) {
+    return JSON.stringify(this.gameManager.get(GID).getPlayerDetails(sub));
   }
 }

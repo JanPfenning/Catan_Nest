@@ -4,7 +4,7 @@ export class Vertex{
   x: number
   y: number
   building: null|Structure.Settlement|Structure.City
-  owner_id: null|string
+  owner_id: null|number
 
   constructor(x: number, y: number) {
     this.x = x;
