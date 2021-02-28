@@ -35,9 +35,9 @@ export class Game{
     const height = hexes.length
     const width = hexes[0].length
     this.edges = []
-    for(let i = 0; i < (2 * width + 2); i++){
+    for(let i = 0; i < (4 * (width + 1) + 2); i++){
       this.edges[i]=[]
-      for(let j = 0; j < (2 * height); j++){
+      for(let j = 0; j < (2 * (height + 1)); j++){
         this.edges[i][j] = new Edge(i,j)
       }
     }

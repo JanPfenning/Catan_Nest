@@ -5,7 +5,6 @@ import { Structure } from '../Models/Structure';
 import { BuildingResource } from '../Models/BuildingResource';
 import { Game } from './Game';
 import { LobbyService } from '../lobby/lobby.service';
-import { Meta } from '../Models/Player';
 import { Gamestate } from '../Models/Gamestate';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mqtt = require('mqtt');
@@ -14,7 +13,7 @@ const dotenv = require('dotenv').config();
 
 @Injectable()
 export class GameService {
-  private gameManager: Map<number, Gamemanager>;
+  gameManager: Map<number, Gamemanager>;
   private gameIdAtomic = 0;
   private client: MqttClient;
   private lobbyService;
@@ -82,7 +81,6 @@ export class GameService {
     }
   }
 
-  //TODO determine order of turns
   determineOrder(GID: number, sub: any){
     if(this.gameManager.get(GID).getGame().state === Gamestate.PREPARATION){
       if (this.gameManager.get(GID).host_sub === sub) {
@@ -90,15 +88,12 @@ export class GameService {
         this.gameManager.get(GID).getGame().state = Gamestate.INITIAL_PLACE
         this.publish(GID);
       }
-      this.gameManager.get(GID).getGame().whos_turn = this.gameManager.get(GID).getGame().players[0]
     }
   }
 
   dice(id: number, sub: any) {
     if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
       this.gameManager.get(id).role_dice();
-      //TODO publish new state
-      //this.gameManager.get(id)
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
@@ -106,8 +101,21 @@ export class GameService {
 
   nextTurn(id: number, sub: any){
     if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
-      this.gameManager.get(id).nextTurn();
-      //TODO publish new state
+      if (this.gameManager.get(id).getGame().state === Gamestate.INITIAL_PLACE){
+        // TODO check when and how to navigate backwards while inital placing
+        this.gameManager.get(id).nextTurn();
+      }else{
+        this.gameManager.get(id).nextTurn();
+      }
+      this.publish(id);
+    }else{
+      throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  prevTurn(id: number, sub: any){
+    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
+      this.gameManager.get(id).prevTurn();
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }

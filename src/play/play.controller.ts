@@ -27,10 +27,13 @@ export class PlayController {
 
   @Post(':id/build')
   build(@Req() req,@Param('id')id:number, @Body() payload:any): void {
-    console.log(payload);
     this.gameService.build(+id, req.user.sub, payload.structure, payload.x, payload.y);
   }
 
+  @Post(':id/nextTurn')
+  nextTurn(@Req() req,@Param('id')id:number): void {
+    this.gameService.nextTurn(+id, req.user.sub);
+  }
   // TODO other funtions of the service
 
 }

@@ -46,7 +46,7 @@ export class Gamemanager {
   }
 
   distributeEarnings(points:number):void{
-    // TODO
+    // TODO distribute earnings to all players
   }
 
   receiveEarnings(player:Playerentity, eyes:number){
@@ -55,9 +55,14 @@ export class Gamemanager {
 
   nextTurn(){
     this.game.turn++;
-    // TODO determine next player via modulo
+    this.game.whos_turn = this.game.players[this.game.turn % this.game.players.length];
   }
 
+  // TODO check this
+  prevTurn(){
+    this.game.turn++;
+    this.game.whos_turn = this.game.players[this.game.players.length - (this.game.turn % this.game.players.length)];
+  }
 
   role_dice(){
     const points = (Math.floor(Math.random() * 6) + 1)+(Math.floor(Math.random() * 6) + 1)
@@ -68,6 +73,7 @@ export class Gamemanager {
     }
     //Normal turn
     else{
+      // TODO
       this.distributeEarnings(points);
     }
   }
