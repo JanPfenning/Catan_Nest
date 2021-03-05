@@ -1,4 +1,5 @@
 import {Resource} from './Resource';
+import { DevelopmentCard } from './DevelopmentCard';
 
 export class Meta {
   /**
@@ -67,7 +68,7 @@ export class Playerentity{
   /**
    * @param develoment_cards tuple of dev_cards and amount
    */
-  private development_cards: any;
+  public development_cards: DevelopmentCard[] = [];
 
   /**
    * @param meta Meta information that can be published
@@ -90,13 +91,8 @@ export class Playerentity{
       'ore': 0,
     };
     
-    this.development_cards = {
-      'knight': 0,
-      'roadbuilding': 0,
-      'yop': 0,
-      'monopoly': 0,
-      'victorypoint': 0,
-    };
+    this.development_cards = [];
+
   }
 
   addResource({brick, lumber, wool, grain, ore}): boolean{

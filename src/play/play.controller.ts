@@ -84,5 +84,16 @@ export class PlayController {
     this.gameService.cancelTrade(+GID, req.user.sub);
   }
 
+  // TODO unaccept trade
+
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Buy a Developmentcard'})
+  @Post(':id/buy_dev')
+  buyDev(@Req() req,@Param('id')GID:number): void {
+    this.gameService.buyDev(+GID, req.user.sub);
+  }
+
+  // TODO Use dev card
+
   // TODO other funtions of the service
 }

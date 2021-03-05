@@ -5,10 +5,13 @@ import { Gamestate } from './Models/Gamestate';
 import { hexToAdjVertices, vertexToAdjHexes } from './translator';
 import { HexType } from './Models/HexType';
 import { HttpException, HttpStatus } from '@nestjs/common';
+import { DevelopmentCard, DevelopmentCardType } from './Models/DevelopmentCard';
+import { GameService } from './game/game.service';
 
 export class Gamemanager {
   private game: Game;
   public player_details: Map<string, Playerentity>;
+  public developmentCards: DevelopmentCard[] = []
   readonly GID;
   readonly host_sub: string;
 
@@ -16,6 +19,26 @@ export class Gamemanager {
     this.game = game;
     this.GID = game.GID
     this.host_sub = host_sub;
+    this.initDevelopmentCards();
+  }
+
+  initDevelopmentCards(): void{
+    for (let i = 0; i < +this.game.max_dev.knight; i++) {
+      this.developmentCards.push(new DevelopmentCard(DevelopmentCardType.Knight));
+    }
+    for (let i = 0; i < +this.game.max_dev.victorypoint; i++) {
+      this.developmentCards.push(new DevelopmentCard(DevelopmentCardType.Victorypoint));
+    }
+    for (let i = 0; i < +this.game.max_dev.monopoly; i++) {
+      this.developmentCards.push(new DevelopmentCard(DevelopmentCardType.Monopoly));
+    }
+    for (let i = 0; i < +this.game.max_dev.roadbuilding; i++) {
+      this.developmentCards.push(new DevelopmentCard(DevelopmentCardType.Roadbuilding));
+    }
+    for (let i = 0; i < +this.game.max_dev.yop; i++) {
+      this.developmentCards.push(new DevelopmentCard(DevelopmentCardType.YearOfPlenty));
+    }
+    this.developmentCards = GameService.shuffle(this.developmentCards);
   }
 
   setPlayerDetails(details: Map<string, Playerentity>){

@@ -5,6 +5,8 @@ import { Meta, Playerentity } from '../Models/Player';
 import { Gamestate } from '../Models/Gamestate';
 import {Resource} from '../Models/Resource';
 import {Harbour} from '../Models/Harbour';
+import { DevelopmentCard } from '../Models/DevelopmentCard';
+import { max } from 'rxjs/operators';
 
 export class Game{
   GID: number
@@ -18,14 +20,14 @@ export class Game{
   bank_res: {brick: number, lumber: number, wool: number, grain: number, ore: number}
   max_res: {brick: number, lumber: number, wool: number, grain: number, ore: number}
   cur_dev: number
-  max_dev: number
+  max_dev: {knight: number, victorypoint: number, monopoly: number, yop: number, roadbuilding: number}
   turn: number
   whos_turn: Meta
   roll_history: number[]
   tradeOffer: {brick, lumber, wool, grain, ore, issuer, possiblePartners};
 
   constructor(GID: number, pointsToWin: number, hexes: Hex[][], harbours: Harbour[],
-              max_res: { brick: number; lumber: number; wool: number; grain: number; ore: number }, max_dev: number) {
+              max_res: { brick: number; lumber: number; wool: number; grain: number; ore: number }, max_dev: {knight: number, victorypoint: number, monopoly: number, yop: number, roadbuilding: number}) {
     this.GID = GID;
     this.pointsToWin = pointsToWin;
     this.harbours = harbours;
@@ -52,7 +54,7 @@ export class Game{
       }
     }
     this.bank_res = JSON.parse(JSON.stringify(this.max_res));
-    this.cur_dev = max_dev;
+    this.cur_dev = (+max_dev.knight) + (+max_dev.monopoly) + (+max_dev.yop) + (+max_dev.roadbuilding) + (+max_dev.victorypoint);
     this.turn = 0;
     this.roll_history = [];
     this.tradeOffer = {brick: 0, lumber: 0, wool: 0, grain: 0, ore: 0, issuer: 0, possiblePartners: []};
