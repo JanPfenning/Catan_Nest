@@ -2,7 +2,9 @@ import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common'
 import { GameService } from '../game/game.service';
 import { LobbyService } from '../lobby/lobby.service';
 import { Playerentity } from '../Models/Player';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('creation')
 @Controller('creation')
 export class CreationController {
 

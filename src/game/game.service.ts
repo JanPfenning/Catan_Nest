@@ -2,17 +2,26 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Gamemanager } from '../Gamemanager';
 import { MqttClient } from 'mqtt';
 import { Structure } from '../Models/Structure';
-import { BuildingResource } from '../Models/BuildingResource';
 import { Game } from './Game';
 import { LobbyService } from '../lobby/lobby.service';
 import { Gamestate } from '../Models/Gamestate';
+import { HarbourType } from '../Models/HarbourType';
+import { Resource } from '../Models/Resource';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mqtt = require('mqtt');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dotenv = require('dotenv').config();
 
+// TODO Longest Road
+// TODO Largest Army
+// TODO Trades
+// TODO Gold resource selection
+// TODO 7-Turn
+// TODO Development Cards
+// TODO additional VP for conquering new island (With structuring as adjacent matrix and depth-search)
 @Injectable()
 export class GameService {
+  static BANK_PID = 1
   gameManager: Map<number, Gamemanager>;
   private gameIdAtomic = 0;
   private client: MqttClient;
@@ -85,15 +94,19 @@ export class GameService {
     if(this.gameManager.get(GID).getGame().state === Gamestate.PREPARATION){
       if (this.gameManager.get(GID).host_sub === sub) {
         this.shuffle(this.gameManager.get(GID).getGame().players);
-        this.gameManager.get(GID).getGame().state = Gamestate.INITIAL_PLACE
+        this.gameManager.get(GID).determineNextPlayer();
+        this.gameManager.get(GID).getGame().state = Gamestate.INITIAL_PLACE_FORWARD
         this.publish(GID);
       }
     }
   }
 
   dice(id: number, sub: any) {
-    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
-      this.gameManager.get(id).role_dice();
+    const gm = this.gameManager.get(id);
+    if (gm.getGame().whos_turn === gm.getPlayerDetails(sub).meta){
+      gm.role_dice();
+      gm.nextPhase();
+      this.publish(id);
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
@@ -101,21 +114,27 @@ export class GameService {
 
   nextTurn(id: number, sub: any){
     if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
-      if (this.gameManager.get(id).getGame().state === Gamestate.INITIAL_PLACE){
-        // TODO check when and how to navigate backwards while inital placing
+      if (this.gameManager.get(id).getGame().state === Gamestate.INITIAL_PLACE_FORWARD || this.gameManager.get(id).getGame().state === Gamestate.INITIAL_PLACE_BACKWARD){
+        const before = this.gameManager.get(id).getGame().state
+        this.gameManager.get(id).nextPhase();
+        if (before === Gamestate.INITIAL_PLACE_BACKWARD && this.gameManager.get(id).getGame().state === Gamestate.DICE){
+          this.gameManager.get(id).getGame().turn = -1;
+        }
+      }
+      if (this.gameManager.get(id).getGame().state === Gamestate.INITIAL_PLACE_FORWARD){
         this.gameManager.get(id).nextTurn();
+      }else if (this.gameManager.get(id).getGame().state === Gamestate.INITIAL_PLACE_BACKWARD){
+        this.gameManager.get(id).nextTurn();
+        this.gameManager.get(id).determinePrevPlayer();
       }else{
-        this.gameManager.get(id).nextTurn();
+        if(this.gameManager.get(id).getGame().turn === -1){
+          this.gameManager.get(id).nextTurn();
+          this.gameManager.get(id).getGame().state = Gamestate.DICE
+        }else{
+          this.gameManager.get(id).nextTurn();
+        }
       }
       this.publish(id);
-    }else{
-      throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  prevTurn(id: number, sub: any){
-    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
-      this.gameManager.get(id).prevTurn();
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
@@ -124,22 +143,231 @@ export class GameService {
   build(GID: number, sub: any, structure: Structure, x: number, y: number){
     if (this.gameManager.get(GID).getGame().whos_turn === this.gameManager.get(GID).getPlayerDetails(sub).meta){
       this.gameManager.get(GID).buildStructure(sub, structure, x, y);
-    }else{
-      throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
-    }
-    this.publish(GID);
-  }
-
-  requestTrade(id: number, sub: any, offerRes: BuildingResource[], reqRes: BuildingResource[]){
-    if (this.gameManager.get(id).getGame().whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta){
-      // TODO publish trade request
+      this.publish(GID);
     }else{
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
   }
 
-  accepptTrade(id: number, sub: any){
-    // TODO trade resource between acceptor and requestor
+  requestTrade(id: number, sub: any, {brick, lumber, wool, grain, ore}){
+    const me = this.gameManager.get(id).getPlayerDetails(sub);
+    const game = this.gameManager.get(id).getGame();
+    if (game.whos_turn === this.gameManager.get(id).getPlayerDetails(sub).meta &&
+        game.state === Gamestate.TURN){
+      if (me.resources.brick + brick >= 0 && me.resources.lumber + lumber >= 0 && me.resources.wool + wool >= 0 &&
+          me.resources.grain + grain >= 0 && me.resources.ore + ore >= 0){
+        game.tradeOffer.brick = brick
+        game.tradeOffer.lumber = lumber
+        game.tradeOffer.wool = wool
+        game.tradeOffer.grain = grain
+        game.tradeOffer.ore = ore
+        game.tradeOffer.issuer = me.meta.PID
+        game.tradeOffer.possiblePartners = []
+        game.state = Gamestate.AWAIT_TRADE;
+        // check if bank is applicable partner and add it to array if so
+        let bankApplicable = true;
+        const myHarbours = new Set()
+        this.gameManager.get(id).getGame().harbours.forEach(harbour => {
+          if (this.gameManager.get(id).getGame().vertices[harbour.x][harbour.y].owner_id === me.meta.PID){
+            if (harbour.resource === HarbourType.Brick){
+              myHarbours.add(Resource.Brick);
+            }
+            if (harbour.resource === HarbourType.Lumber){
+              myHarbours.add(Resource.Lumber);
+            }
+            if (harbour.resource === HarbourType.Wool){
+              myHarbours.add(Resource.Wool);
+            }
+            if (harbour.resource === HarbourType.Grain){
+              myHarbours.add(Resource.Grain);
+            }
+            if (harbour.resource === HarbourType.Ore){
+              myHarbours.add(Resource.Ore);
+            }
+            if (harbour.resource === HarbourType.TTO){
+              myHarbours.add(0);
+            }
+          }
+        })
+        let receive = 0;
+        console.log(game.tradeOffer);
+        if (game.tradeOffer.brick < 0){
+          if (myHarbours.has(Resource.Brick) && game.tradeOffer.brick % 2 === 0){
+            receive += (game.tradeOffer.brick / 2)
+          }
+          else if (myHarbours.has(0) && game.tradeOffer.brick % 3 === 0){
+            receive += (game.tradeOffer.brick / 3)
+          }
+          else if (game.tradeOffer.brick % 4 === 0){
+            receive += (game.tradeOffer.brick / 4)
+          }
+          else{
+            bankApplicable = false;
+          }
+        }
+        if (game.tradeOffer.lumber < 0){
+          if (myHarbours.has(Resource.Lumber) && game.tradeOffer.lumber % 2 === 0){
+            receive += (game.tradeOffer.lumber / 2)
+          }
+          else if (myHarbours.has(0) && game.tradeOffer.lumber % 3 === 0){
+            receive += (game.tradeOffer.lumber / 3)
+          }
+          else if (game.tradeOffer.lumber % 4 === 0){
+            receive += (game.tradeOffer.lumber / 4)
+          }
+          else{
+            bankApplicable = false;
+          }
+        }
+        if (game.tradeOffer.wool < 0){
+          if (myHarbours.has(Resource.Wool) && game.tradeOffer.wool % 2 === 0){
+            receive += (game.tradeOffer.wool / 2)
+          }
+          else if (myHarbours.has(0) && game.tradeOffer.wool % 3 === 0){
+            receive += (game.tradeOffer.wool / 3)
+          }
+          else if (game.tradeOffer.wool % 4 === 0){
+            receive += (game.tradeOffer.wool / 4)
+          }
+          else{
+            bankApplicable = false;
+          }
+        }
+        if (game.tradeOffer.grain < 0){
+          if (myHarbours.has(Resource.Grain) && game.tradeOffer.grain % 2 === 0){
+            receive += (game.tradeOffer.grain / 2)
+          }
+          else if (myHarbours.has(0) && game.tradeOffer.grain % 3 === 0){
+            receive += (game.tradeOffer.grain / 3)
+          }
+          else if (game.tradeOffer.grain % 4 === 0){
+            receive += (game.tradeOffer.grain / 4)
+          }
+          else{
+            bankApplicable = false;
+          }
+        }
+        if (game.tradeOffer.ore < 0){
+          if (myHarbours.has(Resource.Ore) && game.tradeOffer.ore % 2 === 0){
+            receive += (game.tradeOffer.ore / 2)
+          }
+          else if (myHarbours.has(0) && game.tradeOffer.ore % 3 === 0){
+            receive += (game.tradeOffer.ore / 3)
+          }
+          else if (game.tradeOffer.ore % 4 === 0){
+            receive += (game.tradeOffer.ore / 4)
+          }
+          else{
+            bankApplicable = false;
+          }
+        }
+        if (game.tradeOffer.brick > 0){
+          receive -= game.tradeOffer.brick
+        }
+        if (game.tradeOffer.lumber > 0){
+          receive -= game.tradeOffer.lumber
+        }
+        if (game.tradeOffer.wool > 0){
+          receive -= game.tradeOffer.wool
+        }
+        if (game.tradeOffer.grain > 0){
+          receive -= game.tradeOffer.grain
+        }
+        if (game.tradeOffer.ore > 0){
+          receive -= game.tradeOffer.ore
+        }
+        if (receive !== 0){
+          bankApplicable = false;
+        }
+        // TODO validate bankApplicable as condition (its not correct yet)
+        if (bankApplicable && game.bank_res.brick - game.tradeOffer.brick >= 0 && game.bank_res.lumber - game.tradeOffer.lumber >= 0 && game.bank_res.wool - game.tradeOffer.wool >= 0 &&
+          game.bank_res.grain - game.tradeOffer.grain >= 0 && game.bank_res.ore - game.tradeOffer.ore >= 0){
+          this.gameManager.get(id).getGame().tradeOffer.possiblePartners.push(GameService.BANK_PID)
+        }
+        this.publish(id)
+      }
+      else{
+        throw new HttpException('Insufficient resources to give', HttpStatus.BAD_REQUEST);
+      }
+    }
+    else{
+      throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  accepptTrade(GID: number, sub: any){
+    const myPID = this.gameManager.get(GID).getPlayerDetails(sub).meta.PID
+    const me = this.gameManager.get(GID).getPlayerDetails(sub);
+    const game = this.gameManager.get(GID).getGame();
+    if (this.gameManager.get(GID).getGame().tradeOffer.possiblePartners.indexOf(myPID) === -1) {
+      if (this.gameManager.get(GID).getGame().state === Gamestate.AWAIT_TRADE){
+        if (me.resources.brick - game.tradeOffer.brick >= 0 && me.resources.lumber - game.tradeOffer.lumber >= 0 && me.resources.wool - game.tradeOffer.wool >= 0 &&
+          me.resources.grain - game.tradeOffer.grain >= 0 && me.resources.ore - game.tradeOffer.ore >= 0){
+          this.gameManager.get(GID).getGame().tradeOffer.possiblePartners.push(myPID)
+          this.publish(GID);
+        }
+        else{
+          throw new HttpException('You cant afford this trade to be done with you', HttpStatus.BAD_REQUEST);
+        }
+      }
+      else{
+        throw new HttpException('No Trade is awaiting responses', HttpStatus.BAD_REQUEST);
+      }
+    }
+    else{
+      // TODO maybe change it to remove from accepting the trade -> retain acceptance
+      throw new HttpException('You already accepted the trade offer', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  // TODO validate
+  executeTrade(GID: number, sub: any, partnerID: number){
+    const trade = this.gameManager.get(GID).getGame().tradeOffer
+    let partnerSub = '';
+    trade.possiblePartners.forEach(partner => {
+      if (partner === partnerID){
+        if (partner === 1){
+          partnerSub = 'Bank';
+        }
+        else{
+          this.gameManager.get(GID).player_details.forEach(value => {
+            if (value.meta.PID === partnerID){
+              partnerSub = value.sub;
+            }
+          })
+        }
+      }
+    })
+    if (partnerSub === ''){
+      throw new HttpException('Partner did not accept to trade with you', HttpStatus.BAD_REQUEST);
+    }
+    if (this.gameManager.get(GID).getPlayerDetails(sub).meta.PID === trade.issuer){
+      this.gameManager.get(GID).getPlayerDetails(sub).addResource({brick: trade.brick,
+                                                                  lumber: trade.lumber,
+                                                                  wool: trade.wool,
+                                                                  grain: trade.grain,
+                                                                  ore: trade.ore});
+      if (partnerSub === 'Bank'){
+        this.gameManager.get(GID).getGame().bank_res.brick -= trade.brick;
+        this.gameManager.get(GID).getGame().bank_res.lumber -= trade.lumber;
+        this.gameManager.get(GID).getGame().bank_res.wool -= trade.wool;
+        this.gameManager.get(GID).getGame().bank_res.grain -= trade.grain;
+        this.gameManager.get(GID).getGame().bank_res.ore -= trade.ore;
+      }
+      else{
+        this.gameManager.get(GID).getPlayerDetails(partnerSub).addResource({brick: -trade.brick,
+                                                                            lumber: -trade.lumber,
+                                                                            wool: -trade.wool,
+                                                                            grain: -trade.grain,
+                                                                            ore: -trade.ore});
+      }
+      this.gameManager.get(GID).getGame().state = Gamestate.TURN;
+      this.gameManager.get(GID).getGame().tradeOffer = {brick: 0, lumber: 0 , wool: 0, grain: 0, ore: 0, issuer: 0, possiblePartners: []};
+      this.publish(GID);
+    }
+    else{
+      throw new HttpException('You are not the issuer of the trade, hence you cant execute it', HttpStatus.BAD_REQUEST);
+    }
   }
 
   publish(GID: number): void{
@@ -176,5 +404,25 @@ export class GameService {
 
   personalData(GID: number, sub: any) {
     return JSON.stringify(this.gameManager.get(GID).getPlayerDetails(sub));
+  }
+
+  cancelTrade(GID: number, sub: any) {
+    const trade = this.gameManager.get(GID).getGame().tradeOffer
+    if (this.gameManager.get(GID).getPlayerDetails(sub).meta.PID === trade.issuer) {
+      this.gameManager.get(GID).getGame().state = Gamestate.TURN;
+      this.gameManager.get(GID).getGame().tradeOffer = {
+        brick: 0,
+        lumber: 0,
+        wool: 0,
+        grain: 0,
+        ore: 0,
+        issuer: 0,
+        possiblePartners: []
+      };
+      this.publish(GID);
+    }
+    else{
+      throw new HttpException('You are not the issuer of the trade, hence you cant cancel it', HttpStatus.BAD_REQUEST);
+    }
   }
 }

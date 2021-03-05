@@ -3,7 +3,7 @@ import { Structure } from './Structure';
 export class Vertex{
   x: number
   y: number
-  building: null|Structure.Settlement|Structure.City
+  building: Structure
   owner_id: null|number
 
   constructor(x: number, y: number) {

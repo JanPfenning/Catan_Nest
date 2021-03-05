@@ -3,8 +3,8 @@ import { Structure } from './Structure';
 export class Edge{
   x: number
   y: number
-  building: null|Structure.Ship|Structure.Road
-  owner_id: null|string
+  building: Structure
+  owner_id: number
 
   constructor(x: number, y: number) {
     this.x = x;

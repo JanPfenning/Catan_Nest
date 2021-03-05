@@ -1,5 +1,7 @@
-class Harbour{
+import { HarbourType } from './HarbourType';
+
+export class Harbour{
   x: number
   y: number
-  resource: Resource
+  resource: HarbourType
 }

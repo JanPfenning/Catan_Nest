@@ -1,3 +1,5 @@
+import {Resource} from './Resource';
+
 export class Meta {
   /**
    * @param owner is the user owner of the lobby
@@ -36,10 +38,10 @@ export class Meta {
     this.PID = Date.now();
     this.points = 0;
     this.structures_left = {
-      'settlement': 10,
-      'city': 10,
-      'ship': 10,
-      'road': 10
+      'settlement': 5,
+      'city': 4,
+      'ship': 15,
+      'road': 15,
     };
   }
 }
@@ -49,12 +51,18 @@ export class Playerentity{
   /**
    * @param sub id from oauth account
    */
-  private sub: string;
+  readonly sub: string;
 
   /**
    * @param resources tuple of resource and amount
    */
-  private resources: any;
+  public resources: {
+    'brick': 0,
+    'lumber': 0,
+    'wool': 0,
+    'grain': 0,
+    'ore': 0,
+  };
 
   /**
    * @param develoment_cards tuple of dev_cards and amount
@@ -89,5 +97,19 @@ export class Playerentity{
       'monopoly': 0,
       'victorypoint': 0,
     };
+  }
+
+  addResource({brick, lumber, wool, grain, ore}): boolean{
+    if (this.resources.brick + brick >= 0 && this.resources.lumber + lumber >= 0 && this.resources.wool + wool >= 0 &&
+        this.resources.grain + grain >= 0 && this.resources.ore + ore >= 0){
+      this.resources.brick += brick;
+      this.resources.lumber += lumber;
+      this.resources.wool += wool;
+      this.resources.grain += grain;
+      this.resources.ore += ore;
+      return true;
+    }else{
+      return false;
+    }
   }
 }
