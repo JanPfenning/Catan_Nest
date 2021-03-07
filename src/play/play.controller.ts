@@ -1,6 +1,8 @@
 import { Body, Controller, Get, HttpException, HttpStatus, Param, Post, Req } from '@nestjs/common';
 import { GameService } from '../game/game.service';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Edge } from '../Models/Edge';
+import { Resource } from '../Models/Resource';
 
 @ApiBearerAuth()
 @ApiTags('play')
@@ -93,7 +95,37 @@ export class PlayController {
     this.gameService.buyDev(+GID, req.user.sub);
   }
 
-  // TODO Use dev card
+  // TODO validate
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Use developmentcard Roadbuilding'})
+  @Post(':id/dev_road')
+  useRoadbuilding(@Req() req,@Param('id')GID:number, @Body() payload: {structure1: Edge, structure2: Edge}): void {
+    this.gameService.useRoadbuilding(+GID, req.user.sub, payload);
+  }
+
+  // TODO validate
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Use developmentcard YearOfPlenty'})
+  @Post(':id/dev_yop')
+  useYOP(@Req() req,@Param('id')GID:number, @Body() payload: {resource1: Resource, resource2: Resource}): void {
+    this.gameService.useYOP(+GID, req.user.sub, payload);
+  }
+
+  // TODO validate
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Use developmentcard Monopoly'})
+  @Post(':id/dev_monopoly')
+  useMonopoly(@Req() req,@Param('id')GID:number, @Body() payload: {resource}): void {
+    this.gameService.useMonopoly(+GID, req.user.sub, payload);
+  }
+
+  // TODO validate
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Use developmentcard Knight'})
+  @Post(':id/dev_knight')
+  useKnight(@Req() req,@Param('id')GID:number, @Body() payload: {hex}): void {
+    this.gameService.useKnight(+GID, req.user.sub, payload);
+  }
 
   // TODO other funtions of the service
 }

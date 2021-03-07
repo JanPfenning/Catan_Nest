@@ -139,6 +139,7 @@ export class Gamemanager {
           }else{
             throw new HttpException('Insufficient resources', HttpStatus.BAD_REQUEST);
           }
+          break;
         }
         case +Structure.City:{
           if (this.getPlayerDetails(sub).addResource({brick: 0, lumber: 0, wool: 0, grain: -2, ore: -3}) &&
@@ -154,6 +155,7 @@ export class Gamemanager {
           }else{
             throw new HttpException('Insufficient resources or no city left', HttpStatus.BAD_REQUEST);
           }
+          break;
         }
         case +Structure.Settlement:{
           if (this.getPlayerDetails(sub).addResource({brick: -1, lumber: -1, wool: -1, grain: -1, ore: 0}) &&
@@ -168,6 +170,7 @@ export class Gamemanager {
           }else{
             throw new HttpException('Insufficient resources or no settlement left', HttpStatus.BAD_REQUEST);
           }
+          break;
         }
         case +Structure.Ship:{
           if (this.getPlayerDetails(sub).addResource({brick: 0, lumber: -1, wool: -1, grain: 0, ore: 0}) &&
@@ -182,6 +185,7 @@ export class Gamemanager {
           }else{
             throw new HttpException('Insufficient resources or no ship left', HttpStatus.BAD_REQUEST);
           }
+          break;
         }
         case +Structure.DevelopmentCard:{
           throw new HttpException('Use the "buy" route to get a Development Card', HttpStatus.BAD_REQUEST);
