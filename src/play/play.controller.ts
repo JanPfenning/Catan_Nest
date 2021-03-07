@@ -95,7 +95,6 @@ export class PlayController {
     this.gameService.buyDev(+GID, req.user.sub);
   }
 
-  // TODO validate
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Use developmentcard Roadbuilding'})
   @Post(':id/dev_road')
@@ -103,7 +102,6 @@ export class PlayController {
     this.gameService.useRoadbuilding(+GID, req.user.sub, payload);
   }
 
-  // TODO validate
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Use developmentcard YearOfPlenty'})
   @Post(':id/dev_yop')
@@ -111,7 +109,6 @@ export class PlayController {
     this.gameService.useYOP(+GID, req.user.sub, payload);
   }
 
-  // TODO validate
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Use developmentcard Monopoly'})
   @Post(':id/dev_monopoly')
@@ -123,8 +120,29 @@ export class PlayController {
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Use developmentcard Knight'})
   @Post(':id/dev_knight')
-  useKnight(@Req() req,@Param('id')GID:number, @Body() payload: {hex}): void {
-    this.gameService.useKnight(+GID, req.user.sub, payload);
+  useKnight(@Req() req,@Param('id')GID:number): void {
+    this.gameService.useKnight(+GID, req.user.sub);
+  }
+
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Place the Robber to block a hex'})
+  @Post(':id/halfResources')
+  halfResources(@Req() req,@Param('id')GID:number, @Body() payload: {brick, lumber, wool, grain, ore}): void {
+    this.gameService.halfResources(+GID, req.user.sub, payload);
+  }
+
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Place the Robber to block a hex'})
+  @Post(':id/placeRobber')
+  placeRobber(@Req() req,@Param('id')GID:number, @Body() payload: {hex}): void {
+    this.gameService.placeRobber(+GID, req.user.sub, payload);
+  }
+
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Place the Robber to block a hex'})
+  @Post(':id/chooseVictim')
+  chooseVictim(@Req() req,@Param('id')GID:number, @Body() payload: {PID}): void {
+    this.gameService.chooseVictim(+GID, req.user.sub, payload);
   }
 
   // TODO other funtions of the service

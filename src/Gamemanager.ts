@@ -298,11 +298,27 @@ export class Gamemanager {
     this.game.roll_history.push(points);
     //Robber turn
     if(points === 7){
-      // TODO Robbersturn
+      Array.from(this.player_details.values()).forEach(value => {
+        if (this.getResourceNumber(value.sub) > 7){
+          this.getGame().taxEvaders.push(value.meta.PID);
+        }
+      })
+      if (this.getGame().taxEvaders.length === 0){
+        this.getGame().state = Gamestate.PLACE_ROBBER
+      }else{
+        const taxEvaders = []
+        Array.from(this.player_details.values()).forEach(value => {
+          if (value.resources.grain + value.resources.lumber + value.resources.wool + value.resources.brick + value.resources.ore > 7){
+            taxEvaders.push(value.meta.PID);
+          }
+        });
+        this.getGame().state = Gamestate.HALF_RESOURCES;
+      }
     }
     //Normal turn
     else{
       this.distributeEarnings(this.getGame().roll_history[this.getGame().roll_history.length-1])
+      this.nextPhase()
     }
   }
 
@@ -387,5 +403,10 @@ export class Gamemanager {
     }else{
       return false;
     }
+  }
+
+  getResourceNumber(sub: any){
+    const res_obj = this.getPlayerDetails(sub).resources;
+    return (res_obj.lumber + res_obj.brick + res_obj.wool + res_obj.grain + res_obj.ore);
   }
 }

@@ -7,7 +7,7 @@ import { LobbyService } from '../lobby/lobby.service';
 import { Gamestate } from '../Models/Gamestate';
 import { HarbourType } from '../Models/HarbourType';
 import { Resource } from '../Models/Resource';
-import { edgeToAdjVertices } from '../translator';
+import { edgeToAdjVertices, hexToAdjVertices } from '../translator';
 import { Edge } from '../Models/Edge';
 import { DevelopmentCardType } from '../Models/DevelopmentCard';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -107,7 +107,6 @@ export class GameService {
     const gm = this.gameManager.get(id);
     if (gm.getGame().whos_turn === gm.getPlayerDetails(sub).meta) {
       gm.role_dice();
-      gm.nextPhase();
       this.publish(id);
     } else {
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
@@ -445,7 +444,7 @@ export class GameService {
 
   useRoadbuilding(GID: number, sub: any, payload: { structure1: Edge, structure2: Edge }): void {
     if (this.gameManager.get(GID).getGame().whos_turn.PID === this.gameManager.get(GID).getPlayerDetails(sub).meta.PID) {
-      console.log('Use Roadbuilding Devcard')
+      console.log('Use Roadbuilding Devcard');
       let card = null;
       this.gameManager.get(GID).getPlayerDetails(sub).development_cards.forEach(value => {
         if (value.type === DevelopmentCardType.Roadbuilding && this.gameManager.get(GID).getGame().turn > value.bought + 1 && !value.used) {
@@ -501,7 +500,7 @@ export class GameService {
     }
   }
 
-  useYOP(GID: number, sub: any, payload: { resource1: Resource; resource2: Resource}): void {
+  useYOP(GID: number, sub: any, payload: { resource1: Resource; resource2: Resource }): void {
     if (this.gameManager.get(GID).getGame().whos_turn.PID === this.gameManager.get(GID).getPlayerDetails(sub).meta.PID) {
       let card = null;
       this.gameManager.get(GID).getPlayerDetails(sub).development_cards.forEach(value => {
@@ -518,93 +517,83 @@ export class GameService {
           if (this.gameManager.get(GID).getGame().bank_res.brick - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.brick -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.brick += 1;
-          }
-          else{
-            res1 = false
+          } else {
+            res1 = false;
           }
         }
         if (+payload.resource1 === +Resource.Lumber) {
           if (this.gameManager.get(GID).getGame().bank_res.lumber - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.lumber -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.lumber += 1;
-          }
-          else{
-            res1 = false
+          } else {
+            res1 = false;
           }
         }
         if (+payload.resource1 === +Resource.Wool) {
           if (this.gameManager.get(GID).getGame().bank_res.wool - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.wool -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.wool += 1;
-          }
-          else{
-            res1 = false
+          } else {
+            res1 = false;
           }
         }
         if (+payload.resource1 === +Resource.Grain) {
           if (this.gameManager.get(GID).getGame().bank_res.grain - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.grain -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.grain += 1;
-          }
-          else{
-            res1 = false
+          } else {
+            res1 = false;
           }
         }
         if (+payload.resource1 === +Resource.Ore) {
           if (this.gameManager.get(GID).getGame().bank_res.ore - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.ore -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.ore += 1;
-          }
-          else{
-            res1 = false
+          } else {
+            res1 = false;
           }
         }
         if (+payload.resource2 === +Resource.Brick) {
           if (this.gameManager.get(GID).getGame().bank_res.brick - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.brick -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.brick += 1;
-          }
-          else{
-            res2 = false
+          } else {
+            res2 = false;
           }
         }
         if (+payload.resource2 === +Resource.Lumber) {
           if (this.gameManager.get(GID).getGame().bank_res.lumber - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.lumber -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.lumber += 1;
-          }
-          else{
-            res2 = false
+          } else {
+            res2 = false;
           }
         }
         if (+payload.resource2 === +Resource.Wool) {
           if (this.gameManager.get(GID).getGame().bank_res.wool - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.wool -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.wool += 1;
-          }
-          else{
-            res2 = false
+          } else {
+            res2 = false;
           }
         }
         if (+payload.resource2 === +Resource.Grain) {
           if (this.gameManager.get(GID).getGame().bank_res.grain - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.grain -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.grain += 1;
-          }
-          else{
-            res2 = false
+          } else {
+            res2 = false;
           }
         }
         if (+payload.resource2 === +Resource.Ore) {
           if (this.gameManager.get(GID).getGame().bank_res.ore - 1 >= 0) {
             this.gameManager.get(GID).getGame().bank_res.ore -= 1;
             this.gameManager.get(GID).getPlayerDetails(sub).resources.ore += 1;
-          }
-          else{
-            res2 = false
+          } else {
+            res2 = false;
           }
         }
-        if (! (res1 && res2)){
+        if (!(res1 && res2)) {
           this.gameManager.get(GID).getGame().bank_res = bankResBackup;
           this.gameManager.get(GID).getPlayerDetails(sub).resources = subResBackup;
         }
@@ -659,7 +648,7 @@ export class GameService {
     }
   }
 
-  useKnight(GID: number, sub: any, payload: { hex }) {
+  useKnight(GID: number, sub: any) {
     if (this.gameManager.get(GID).getGame().whos_turn.PID === this.gameManager.get(GID).getPlayerDetails(sub).meta.PID) {
       let card = null;
       this.gameManager.get(GID).getPlayerDetails(sub).development_cards.forEach(value => {
@@ -668,7 +657,8 @@ export class GameService {
         }
       });
       if (card !== null) {
-        // TODO implement
+        this.gameManager.get(GID).getGame().state = Gamestate.PLACE_ROBBER
+        card.used = true;
         this.publish(GID);
       } else {
         throw new HttpException('You dont own a Knightcard that is applicable', HttpStatus.BAD_REQUEST);
@@ -676,5 +666,160 @@ export class GameService {
     } else {
       throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
     }
+  }
+
+  // TODO remove previous robber
+  placeRobber(GID: number, sub: any, payload: { hex }) {
+    if (this.gameManager.get(GID).getGame().whos_turn.PID === this.gameManager.get(GID).getPlayerDetails(sub).meta.PID) {
+      const hex = this.gameManager.get(GID).getGame().hexes[payload.hex.x][payload.hex.y];
+      if (!hex.knight) {
+        hex.knight = true;
+        const adj_hexes = hexToAdjVertices(hex);
+        const possible_victims = [];
+        adj_hexes.forEach(value => {
+          if (this.gameManager.get(GID).getGame().vertices[value[0]][value[1]].owner_id &&
+              this.gameManager.get(GID).getGame().vertices[value[0]][value[1]].owner_id !== this.gameManager.get(GID).getPlayerDetails(sub).meta.PID) {
+            possible_victims.push(this.gameManager.get(GID).getGame().vertices[value[0]][value[1]].owner_id);
+          }
+        });
+        this.gameManager.get(GID).getGame().possible_victims = possible_victims;
+        if (this.gameManager.get(GID).getGame().possible_victims.length > 0){
+          this.gameManager.get(GID).getGame().state = Gamestate.CHOOSE_ROBBED;
+        }else{
+          this.gameManager.get(GID).getGame().state = Gamestate.TURN;
+        }
+        this.publish(GID);
+      } else {
+        throw new HttpException('You cant place the knight where it already was', HttpStatus.BAD_REQUEST);
+      }
+    } else {
+      throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  chooseVictim(GID: number, sub: any, payload: { PID }) {
+    if (this.gameManager.get(GID).getGame().whos_turn.PID === this.gameManager.get(GID).getPlayerDetails(sub).meta.PID) {
+      if (this.gameManager.get(GID).getGame().possible_victims.indexOf(payload.PID) !== -1) {
+        let robbed = null;
+        Array.from(this.gameManager.get(GID).player_details.values()).forEach(value => {
+          if (value.meta.PID === payload.PID) {
+            robbed = value;
+          }
+        });
+        const res = [];
+        for (let i = 0; i < robbed.resources.brick; i++) {
+          res.push(Resource.Brick);
+        }
+        for (let i = 0; i < robbed.lumber; i++) {
+          res.push(Resource.Lumber);
+        }
+        for (let i = 0; i < robbed.wool; i++) {
+          res.push(Resource.Wool);
+        }
+        for (let i = 0; i < robbed.resources.grain; i++) {
+          res.push(Resource.Grain);
+        }
+        for (let i = 0; i < robbed.resources.ore; i++) {
+          res.push(Resource.Ore);
+        }
+        console.log(res)
+        // TODO doesnt work properly
+        const item = res[Math.floor(Math.random() * res.length)];
+        switch (item) {
+          case (Resource.Brick): {
+            robbed.addResource({ brick: -1, lumber: 0, wool: 0, grain: 0, ore: 0 });
+            this.gameManager.get(GID).getPlayerDetails(sub).addResource({
+              brick: 1,
+              lumber: 0,
+              wool: 0,
+              grain: 0,
+              ore: 0,
+            });
+            break;
+          }
+          case (Resource.Lumber): {
+            robbed.addResource({ brick: 0, lumber: -1, wool: 0, grain: 0, ore: 0 });
+            this.gameManager.get(GID).getPlayerDetails(sub).addResource({
+              brick: 0,
+              lumber: 1,
+              wool: 0,
+              grain: 0,
+              ore: 0,
+            });
+            break;
+          }
+          case (Resource.Wool): {
+            robbed.addResource({ brick: 0, lumber: 0, wool: -1, grain: 0, ore: 0 });
+            this.gameManager.get(GID).getPlayerDetails(sub).addResource({
+              brick: 1,
+              lumber: 0,
+              wool: 1,
+              grain: 0,
+              ore: 0,
+            });
+            break;
+          }
+          case (Resource.Grain): {
+            robbed.addResource({ brick: 0, lumber: 0, wool: 0, grain: -1, ore: 0 });
+            this.gameManager.get(GID).getPlayerDetails(sub).addResource({
+              brick: 1,
+              lumber: 0,
+              wool: 0,
+              grain: 1,
+              ore: 0,
+            });
+            break;
+          }
+          case (Resource.Ore): {
+            robbed.addResource({ brick: 0, lumber: 0, wool: 0, grain: 0, ore: -1 });
+            this.gameManager.get(GID).getPlayerDetails(sub).addResource({
+              brick: 0,
+              lumber: 0,
+              wool: 0,
+              grain: 0,
+              ore: 1,
+            });
+            break;
+          }
+        }
+        this.gameManager.get(GID).getGame().state = Gamestate.TURN;
+        this.publish(GID);
+      } else {
+        throw new HttpException('The person you try to robb is not close to the robber', HttpStatus.BAD_REQUEST);
+      }
+    } else {
+      throw new HttpException('Its not your turn', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  // TODO fix
+  halfResources(GID: number, sub: any, payload: { brick; lumber; wool; grain; ore }): void {
+    const resource_backup = JSON.parse(JSON.stringify(this.gameManager.get(GID).getPlayerDetails(sub).resources))
+    const resources = this.getResourceNumber(GID, sub);
+    if (this.gameManager.get(GID).getPlayerDetails(sub).addResource({brick: payload.brick, lumber: payload.lumber, wool: payload.wool, grain: payload.grain, ore: payload.ore})){
+      const newRes = this.getResourceNumber(GID, sub);
+      if (Math.floor(resources / newRes) === 2) {
+        const idx = this.gameManager.get(GID).getGame().taxEvaders.indexOf(this.gameManager.get(GID).getPlayerDetails(sub).meta.PID)
+        this.gameManager.get(GID).getGame().taxEvaders.splice(idx, 1);
+      }
+      else{
+        this.gameManager.get(GID).getPlayerDetails(sub).resources = resource_backup;
+        throw new HttpException('Insufficient amount of resources', HttpStatus.BAD_REQUEST);
+      }
+    }
+    else{
+      throw new HttpException('Inaccaptable amount of resources', HttpStatus.BAD_REQUEST);
+    }
+    if (this.gameManager.get(GID).getGame().taxEvaders.length === 0) {
+      this.gameManager.get(GID).getGame().state = Gamestate.PLACE_ROBBER;
+    } else {
+      this.gameManager.get(GID).getGame().state = Gamestate.HALF_RESOURCES;
+    }
+    this.publish(GID);
+  }
+
+  getResourceNumber(GID: number, sub: any){
+    const res_obj = this.gameManager.get(GID).getPlayerDetails(sub).resources;
+    return (res_obj.lumber + res_obj.brick + res_obj.wool + res_obj.grain + res_obj.ore);
   }
 }
