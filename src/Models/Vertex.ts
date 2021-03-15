@@ -5,6 +5,7 @@ export class Vertex{
   y: number
   building: Structure
   owner_id: null|number
+  additionalPoint = false;
 
   constructor(x: number, y: number) {
     this.x = x;

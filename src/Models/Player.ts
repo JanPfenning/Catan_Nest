@@ -1,5 +1,4 @@
-import {Resource} from './Resource';
-import { DevelopmentCard } from './DevelopmentCard';
+import { DevelopmentCard, DevelopmentCardType } from './DevelopmentCard';
 
 export class Meta {
   /**
@@ -21,7 +20,7 @@ export class Meta {
   /**
    * @param points current victory points
    */
-  private points:number;
+  points:number;
 
   /**
    * @param structures_left tuple of structures and amount
@@ -32,6 +31,26 @@ export class Meta {
     ship: number,
     road: number
   };
+
+  /**
+   * @param longestRoad length of own road
+   */
+  ownRoad = 0;
+
+  /**
+   * @param largestArmy size of own army
+   */
+  ownArmy = 0;
+
+  /**
+   * @param resourceAmount number of resources
+   */
+  resourceAmount = 0;
+
+  /**
+   * @param devAmount number of development cards
+   */
+  devAmount = 0;
 
   constructor(name: string, colour: string) {
     this.name = name;
@@ -57,7 +76,7 @@ export class Playerentity{
   /**
    * @param resources tuple of resource and amount
    */
-  public resources: {
+  private resources: {
     'brick': 0,
     'lumber': 0,
     'wool': 0,
@@ -103,9 +122,29 @@ export class Playerentity{
       this.resources.wool += wool;
       this.resources.grain += grain;
       this.resources.ore += ore;
+      this.meta.resourceAmount = this.resources.brick + this.resources.lumber + this.resources.wool + this.resources.grain + this.resources.ore;
       return true;
     }else{
       return false;
     }
+  }
+
+  getResources(): any{
+    return this.resources;
+  }
+
+  setResources(resources: any) {
+    this.resources = resources;
+    this.meta.resourceAmount = this.resources.brick + this.resources.lumber + this.resources.wool + this.resources.grain + this.resources.ore;
+  }
+
+  calculateOwnArmyForce(){
+    let amount = 0;
+    this.development_cards.forEach(value => {
+      if (value.used && value.type === DevelopmentCardType.Knight){
+        amount++;
+      }
+    })
+    this.meta.ownArmy = amount;
   }
 }

@@ -226,9 +226,18 @@ export function vertexToAdjVertices(v: Vertex) {
 /**
  * used for e.g. denying settlement without connection
  * @param v Vertex which adjacent Edges are to be determined
- * @returns List of adjacent Edges
+ * @returns List of adjacent Edges west/east/vertical
  */
-export function vertexToAdjEdges(v: Vertex) {
-  // TODO implement vertex to adj edges
-  return null;
+export function vertexToAdjEdges(v: Vertex){
+  if (v.y % 2 === 0){
+    return [
+      [2 * v.x - 1, v.y    ],
+      [2 * v.x + 1, v.y    ],
+      [2 * v.x    , v.y - 1]];
+  }else{
+    return [
+      [2 * v.x - 1, v.y - 1],
+      [2 * v.x + 1, v.y - 1],
+      [2 * v.x    , v.y    ]];
+  }
 }

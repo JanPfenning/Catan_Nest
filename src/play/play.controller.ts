@@ -68,7 +68,7 @@ export class PlayController {
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Accept trade, so trade issuer can choose to execute trade with acceptance issuer'})
   @Post(':id/trade_accept')
-  accept_trade(@Req() req,@Param('id')GID:number, @Body()payload: any): void {
+  accept_trade(@Req() req,@Param('id')GID:number): void {
     this.gameService.accepptTrade(+GID, req.user.sub);
   }
 
@@ -86,7 +86,12 @@ export class PlayController {
     this.gameService.cancelTrade(+GID, req.user.sub);
   }
 
-  // TODO unaccept trade
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Cancel acceptance of trade'})
+  @Post(':id/cancel_acceptance')
+  cancel_acceptance(@Req() req,@Param('id')GID:number): void {
+    this.gameService.cancel_acceptance(+GID, req.user.sub);
+  }
 
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Buy a Developmentcard'})
@@ -116,7 +121,6 @@ export class PlayController {
     this.gameService.useMonopoly(+GID, req.user.sub, payload);
   }
 
-  // TODO validate
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Use developmentcard Knight'})
   @Post(':id/dev_knight')
@@ -145,5 +149,14 @@ export class PlayController {
     this.gameService.chooseVictim(+GID, req.user.sub, payload);
   }
 
-  // TODO other funtions of the service
+  @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
+  @ApiOperation({description: 'Choose the resources from goldsource'})
+  @Post(':id/requestGold')
+  requestGold(@Req() req,@Param('id')GID:number, @Body()payload: any): void {
+    this.gameService.requestGoldResources(+GID, req.user.sub, {brick: payload.brick,
+                                                                lumber: payload.lumber,
+                                                                wool: payload.wool,
+                                                                grain: payload.grain,
+                                                                ore: payload.ore});
+  }
 }

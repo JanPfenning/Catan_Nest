@@ -58,7 +58,6 @@ export class LobbyService {
     })
     */
   }
-  //TODO delete lobby by the latest of an hour uptime
 
   newLobby(id: number, player: {name: string, color: string}, sub: string) {
     this.player.set(id,new Map<string, Playerentity>());
