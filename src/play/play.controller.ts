@@ -103,8 +103,8 @@ export class PlayController {
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})
   @ApiOperation({description: 'Use developmentcard Roadbuilding'})
   @Post(':id/dev_road')
-  useRoadbuilding(@Req() req,@Param('id')GID:number, @Body() payload: {structure1: Edge, structure2: Edge}): void {
-    this.gameService.useRoadbuilding(+GID, req.user.sub, payload);
+  useRoadbuilding(@Req() req,@Param('id')GID:number): void {
+    this.gameService.useRoadbuilding(+GID, req.user.sub);
   }
 
   @ApiParam({name: 'id', description: 'Game ID', allowEmptyValue: false, type: 'string', required: true})

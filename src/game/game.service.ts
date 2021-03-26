@@ -483,7 +483,7 @@ export class GameService {
     }
   }
 
-  useRoadbuilding(GID: number, sub: any, payload: { structure1: Edge, structure2: Edge }): void {
+  useRoadbuilding(GID: number, sub: any): void {
     if (this.gameManager.get(GID).getGame().whos_turn.PID === this.gameManager.get(GID).getPlayerDetails(sub).meta.PID) {
       if (this.gameManager.get(GID).getGame().devPlayed){
         throw new HttpException('You can only play a single Dev card per round', HttpStatus.BAD_REQUEST)
@@ -495,44 +495,7 @@ export class GameService {
         }
       });
       if (card !== null) {
-        // TODO check if structrues are applicable
-        if (+payload.structure1.building === +Structure.Road) {
-          this.gameManager.get(GID).getPlayerDetails(sub).addResource({
-            brick: 1,
-            lumber: 1,
-            wool: 0,
-            grain: 0,
-            ore: 0,
-          });
-        } else {
-          this.gameManager.get(GID).getPlayerDetails(sub).addResource({
-            brick: 0,
-            lumber: 1,
-            wool: 1,
-            grain: 0,
-            ore: 0,
-          });
-        }
-        if (+payload.structure2.building === +Structure.Road) {
-          this.gameManager.get(GID).getPlayerDetails(sub).addResource({
-            brick: 1,
-            lumber: 1,
-            wool: 0,
-            grain: 0,
-            ore: 0,
-          });
-        } else {
-          this.gameManager.get(GID).getPlayerDetails(sub).addResource({
-            brick: 0,
-            lumber: 1,
-            wool: 1,
-            grain: 0,
-            ore: 0,
-          });
-        }
-        console.log(payload);
-        this.gameManager.get(GID).buildStructure(sub, payload.structure1.building, payload.structure1.x, payload.structure1.y);
-        this.gameManager.get(GID).buildStructure(sub, payload.structure2.building, payload.structure2.x, payload.structure2.y);
+        this.gameManager.get(GID).getGame().state = Gamestate.ROADBUILDING_1;
         card.used = true;
         this.gameManager.get(GID).getPlayerDetails(sub).meta.devAmount -= 1;
         this.gameManager.get(GID).getCurRoadOfSub(sub);

@@ -223,8 +223,40 @@ export class Gamemanager {
           throw new HttpException('Use the "buy" route to get a Development Card', HttpStatus.BAD_REQUEST);
         }
       }
-    }else{
-      throw new HttpException('You cant build when its not Gamestate "Turn"', HttpStatus.BAD_REQUEST);
+    }
+    // TODO also check if roads or ships exists to place
+    else if (this.getGame().state === Gamestate.ROADBUILDING_1 || this.getGame().state === Gamestate.ROADBUILDING_2){
+      console.log(+structure)
+      switch (+structure) {
+        case +Structure.Road: {
+          const edge = this.getGame().edges[x][y];
+          edge.building = structure;
+          edge.owner_id = this.getPlayerDetails(sub).meta.PID;
+          edge.x = x;
+          edge.y = y;
+          this.getPlayerDetails(sub).meta.structures_left.road -= 1;
+          break;
+        }
+        case +Structure.Ship: {
+          const edge = this.getGame().edges[x][y];
+          edge.building = structure;
+          edge.owner_id = this.getPlayerDetails(sub).meta.PID;
+          edge.x = x;
+          edge.y = y;
+          this.getPlayerDetails(sub).meta.structures_left.ship -= 1;
+          break;
+        }
+      }
+      if(this.getGame().state === Gamestate.ROADBUILDING_1){
+        this.getGame().state = Gamestate.ROADBUILDING_2;
+      }else if (this.getGame().state === Gamestate.ROADBUILDING_2){
+        this.getGame().state = Gamestate.TURN;
+      }
+      this.getCurRoadOfSub(sub);
+      this.getLongestRoadOwner()
+    }
+    else{
+      throw new HttpException('You cant build when its not Gamestate "Turn" or you used Roadbuilding card', HttpStatus.BAD_REQUEST);
     }
   }
 
